@@ -24,27 +24,27 @@ int init_module(void)
 
     char cmdlineFile[BUFFERSIZE];
     int res;
-    
+
     printk (KERN_INFO "findExecutable module loading\n");
     /* current is pre-defined pointer to task structure of currently running task */
     mod_pid = current->pid;
-    snprintf (cmdlineFile, BUFFERSIZE, "/proc/%d/exe", mod_pid); 
+    snprintf (cmdlineFile, BUFFERSIZE, "/proc/%d/exe", mod_pid);
     res = kern_path (cmdlineFile, LOOKUP_FOLLOW, &path);
     if (res) {
 	printk (KERN_INFO "Could not get dentry for %s!\n", cmdlineFile);
 	return -EFAULT;
     }
-    
+
     procDentry = path.dentry;
     printk (KERN_INFO "The name is %s\n", procDentry->d_name.name);
     parent = procDentry->d_parent;
     printk (KERN_INFO "The name of the parent is %s\n", parent->d_name.name);
     return 0;
-    
+
 }
 
 
 void cleanup_module(void)
 {
     printk(KERN_INFO "findExecutable module unloading \n");
-}  
+}

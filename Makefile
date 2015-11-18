@@ -2,9 +2,9 @@ KERNELDIR=/lib/modules/`uname -r`/build
 #ARCH=i386
 #KERNELDIR=/usr/src/kernels/`uname -r`-i686
 
-MODULES = firewallExtension.ko findExecutable.ko
- 
-obj-m += firewallExtension.o findExecutable.o
+MODULES = firewallExtension.ko findExecutable.ko kernelWrite.ko
+
+obj-m += firewallExtension.o findExecutable.o kernelWrite.o
 
 all:
 	make -C  $(KERNELDIR) M=$(PWD) modules
@@ -12,7 +12,7 @@ all:
 clean:
 	make -C $(KERNELDIR) M=$(PWD) clean
 
-install:	
+install:
 	make -C $(KERNELDIR) M=$(PWD) modules_install
 
 quickInstall:
