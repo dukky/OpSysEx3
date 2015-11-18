@@ -6,6 +6,7 @@
 #include <linux/compiler.h>
 #include <net/tcp.h>
 #include <linux/namei.h>
+#include <linux/slab.h>
 
 MODULE_AUTHOR ("Eike Ritter <E.Ritter@cs.bham.ac.uk>");
 MODULE_DESCRIPTION ("Extensions to the firewall") ;
@@ -28,12 +29,37 @@ struct ruleList {
        int port;
        char *executable_path;
        struct ruleList *next;
+};
+
+void ruleListAdd(struct ruleList *list, struct ruleList *new) {
+        struct ruleList *curr;
+        struct ruleList *tmp;
+        curr = rule_list;
+        tmp = rule_list->next;
+        while(tmp) {
+                curr = tmp;
+                tmp = tmp->next;
+        }
+        // Last element is now curr
+        curr->next = new;
+
 }
 
-int ruleListAdd(struct ruleList *list, struct ruleList *new) {
+void ruleListFree(struct ruleList *list) {
+        struct ruleList *curr;
         struct ruleList *tmp;
-        tmp =
+        curr = list;
+        tmp  = NULL;
+        while(curr) {
+                tmp = curr->next;
+                kfree(curr->executable_path);
+                kfree(curr);
+                curr = tmp;
+        }
 }
+
+
+//int ruleListContains
 
 #define BUFFERSIZE 80
 
@@ -55,6 +81,8 @@ unsigned int FirewallExtensionHook (const struct nf_hook_ops *ops,
 
     char cmdlineFile[BUFFERSIZE];
     int res;
+
+    char *result;
 
     sk = skb->sk;
     if (!sk) {
@@ -100,7 +128,8 @@ unsigned int FirewallExtensionHook (const struct nf_hook_ops *ops,
         printk (KERN_INFO "The name is %s\n", procDentry->d_name.name);
         parent = procDentry->d_parent;
         printk (KERN_INFO "The name of the parent is %s\n", parent->d_name.name);
-
+        result = d_path(&path, cmdlineFile, BUFFERSIZE);
+        printk (KERN_INFO "After calling d_path %s\n", result);
 
 
 	if (in_irq() || in_softirq()) {
