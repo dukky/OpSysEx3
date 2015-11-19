@@ -1,9 +1,9 @@
-/*  Example for transferring data from user space into the kernel 
+/*  Example for transferring data from user space into the kernel
  */
 
 #include <linux/module.h>  /* Needed by all modules */
 #include <linux/kernel.h>  /* Needed for KERN_ALERT */
-#include <linux/proc_fs.h> 
+#include <linux/proc_fs.h>
 #include <linux/slab.h>
 #include <asm/uaccess.h>
 #include <linux/list.h>
@@ -42,12 +42,12 @@ void show_table (void) {
 }
 
 void increase_counter (void) {
-    
+
     down_write (&counter_sem); /* lock for writing */
     counter1++;
     counter2++;
     up_write (&counter_sem);
-    
+
 }
 
 /* This function reads in data from the user into the kernel */
@@ -62,7 +62,7 @@ ssize_t kernelWrite (struct file *file, const char __user *buffer, size_t count,
     if (get_user (command, buffer)) {
 	return -EFAULT;
     }
-  
+
   switch (command) {
     case INCREASE_COUNTER:
 	increase_counter ();
@@ -70,18 +70,18 @@ ssize_t kernelWrite (struct file *file, const char __user *buffer, size_t count,
     case SHOW_COUNTER:
 	show_table ();
       break;
-    default: 
+    default:
       printk (KERN_INFO "kernelWrite: Illegal command \n");
   }
   return count;
 }
-  
 
 
-/* 
+
+/*
  * The file is opened - we don't really care about
  * that, but it does mean we need to increment the
- * module's reference count. 
+ * module's reference count.
  */
 int procfs_open(struct inode *inode, struct file *file)
 {
@@ -90,9 +90,9 @@ int procfs_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-/* 
+/*
  * The file is closed - again, interesting only because
- * of the reference count. 
+ * of the reference count.
  */
 int procfs_close(struct inode *inode, struct file *file)
 {
@@ -111,31 +111,31 @@ const struct file_operations File_Ops_4_Our_Proc_File = {
 
 int init_module(void)
 {
-	
 
-    
+
+
     /* create the /proc file */
     Our_Proc_File = proc_create_data (PROC_ENTRY_FILENAME, 0644, NULL, &File_Ops_4_Our_Proc_File, NULL);
-    
+
     /* check if the /proc file was created successfuly */
     if (Our_Proc_File == NULL){
 	printk(KERN_ALERT "Error: Could not initialize /proc/%s\n",
 	       PROC_ENTRY_FILENAME);
 	return -ENOMEM;
     }
-    
+
     printk(KERN_INFO "/proc/%s created\n", PROC_ENTRY_FILENAME);
-    
+
     return 0;	/* success */
 
 }
-  
+
 void cleanup_module(void)
 {
 
   remove_proc_entry(PROC_ENTRY_FILENAME, NULL);
-  printk(KERN_INFO "/proc/%s removed\n", PROC_ENTRY_FILENAME);  
+  printk(KERN_INFO "/proc/%s removed\n", PROC_ENTRY_FILENAME);
 
   printk(KERN_INFO "kernelWrite:Proc module unloaded.\n");
-  
-}  
+
+}

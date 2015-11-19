@@ -209,6 +209,62 @@ static struct nf_hook_ops firewallExtension_ops = {
 	.hooknum = NF_INET_LOCAL_OUT
 };
 
+/* This function reads in data from the user into the kernel */
+ssize_t kernelWrite (struct file *file, const char __user *buffer, size_t count, loff_t *offset) {
+
+
+    char kern_buffer[2048*50];
+
+    if (copy_from_user(kern_buffer, buffer, count)) {
+	return -EFAULT;
+    }
+    printf("Recieved:\n%s\n", kern_buffer);
+    printk (KERN_INFO "kernelWrite entered\n");
+    char command = kern_buffer[0];
+
+  switch (command) {
+    case 'L':
+	//List
+	break;
+    case 'W':
+	//Write new rules
+      break;
+    default:
+      printk (KERN_INFO "kernelWrite: Illegal command \n");
+  }
+  return count;
+}
+
+/*
+ * The file is opened - we don't really care about
+ * that, but it does mean we need to increment the
+ * module's reference count.
+ */
+int procfs_open(struct inode *inode, struct file *file)
+{
+    printk (KERN_INFO "firewallExtension opened\n");
+	try_module_get(THIS_MODULE);
+	return 0;
+}
+
+/*
+ * The file is closed - again, interesting only because
+ * of the reference count.
+ */
+int procfs_close(struct inode *inode, struct file *file)
+{
+    printk (KERN_INFO "fireWallExtension closed\n");
+    module_put(THIS_MODULE);
+    return 0;		/* success */
+}
+
+const struct file_operations File_Ops_4_Our_Proc_File = {
+    .owner = THIS_MODULE,
+    .write 	 = kernelWrite,
+    .open 	 = procfs_open,
+    .release = procfs_close,
+};
+
 int init_module(void)
 {
 

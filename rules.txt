@@ -1,0 +1,2 @@
+80 /bin/nc.openbsd
+80 /usr/bin/firefox
