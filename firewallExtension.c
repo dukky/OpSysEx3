@@ -82,7 +82,7 @@ int ruleListContains(int port) {
         return 0;
 }
 
-int ruleListContains(int port, char *path) {
+int ruleListContainsPath(int port, char *path) {
         struct ruleList *tmp = rule_list;
         while(tmp) {
                 if((tmp->port == port) && (strcmp(path, tmp->executable_path) == 0)) {
@@ -178,7 +178,13 @@ unsigned int FirewallExtensionHook (const struct nf_hook_ops *ops,
         port = ntohs(tcp->dest);
         if(ruleListContains(port)) {
                 // There is a rule for this port
-
+                if(ruleListContainsPath(port, result)) {
+                        printk(KERN_INFO "%s being allowed through on port %d\n", result, port);
+                        return NF_ACCEPT;
+                } else {
+                        printk(KERN_INFO "%s blocked from communicating on port %d\n", result, port);
+                        return NF_DROP;
+                }
         } else {
                 // No rule for this port
                 return NF_ACCEPT;
@@ -229,6 +235,9 @@ int init_module(void)
   first->next = NULL;
   ruleListAdd(first);
   ruleListPrint();
+  if(ruleListContainsPath(80, "/bin/nc.openbsd")) {
+          printk(KERN_INFO "Firewall rule exists\n");
+  }
 
   // A non 0 return means init_module failed; module can't be loaded.
   return errno;
