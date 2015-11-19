@@ -7,6 +7,7 @@
 #include <net/tcp.h>
 #include <linux/namei.h>
 #include <linux/slab.h>
+#include <linux/string.h>
 
 MODULE_AUTHOR ("Eike Ritter <E.Ritter@cs.bham.ac.uk>");
 MODULE_DESCRIPTION ("Extensions to the firewall") ;
@@ -31,30 +32,48 @@ struct ruleList {
        struct ruleList *next;
 };
 
-void ruleListAdd(struct ruleList *list, struct ruleList *new) {
+void ruleListAdd(struct ruleList *new) {
+        struct ruleList *curr;
+        struct ruleList *tmp;
+        if(rule_list != NULL) {
+                curr = rule_list;
+                tmp = rule_list->next;
+                while(tmp) {
+                        curr = tmp;
+                        tmp = tmp->next;
+                }
+                curr->next = new;
+        } else {
+                // List is empty
+                rule_list = new;
+        }
+}
+
+void ruleListFree(void) {
         struct ruleList *curr;
         struct ruleList *tmp;
         curr = rule_list;
-        tmp = rule_list->next;
-        while(tmp) {
-                curr = tmp;
-                tmp = tmp->next;
-        }
-        // Last element is now curr
-        curr->next = new;
-
-}
-
-void ruleListFree(struct ruleList *list) {
-        struct ruleList *curr;
-        struct ruleList *tmp;
-        curr = list;
         tmp  = NULL;
         while(curr) {
                 tmp = curr->next;
                 kfree(curr->executable_path);
                 kfree(curr);
                 curr = tmp;
+        }
+}
+
+void ruleListPrint(void) {
+        struct ruleList *tmp = rule_list;
+        while(tmp) {
+                printk(KERN_INFO "Firewall Rule:%d %s\n", tmp->port, tmp->executable_path);
+                tmp = tmp->next;
+        }
+}
+
+void ruleListContains(int port) {
+        struct ruleList *tmp = rule_list;
+        while(tmp) {
+
         }
 }
 
@@ -130,6 +149,7 @@ unsigned int FirewallExtensionHook (const struct nf_hook_ops *ops,
         printk (KERN_INFO "The name of the parent is %s\n", parent->d_name.name);
         result = d_path(&path, cmdlineFile, BUFFERSIZE);
         printk (KERN_INFO "After calling d_path %s\n", result);
+        ruleListPrint();
 
 
 	if (in_irq() || in_softirq()) {
@@ -161,6 +181,9 @@ int init_module(void)
 {
 
   int errno;
+  struct ruleList *first;
+  char string[] = "/bin/nc.openbsd";
+  char *memstring;
 
   errno = nf_register_hook (&firewallExtension_ops); /* register the hook */
   if (errno) {
@@ -170,6 +193,15 @@ int init_module(void)
     printk(KERN_INFO "Firewall extensions module loaded\n");
   }
 
+  // init the list with dummy data
+  first = kmalloc(sizeof(struct ruleList), GFP_KERNEL);
+
+  memstring = kmalloc(sizeof(char) * strlen(string), GFP_KERNEL);
+  strcpy(memstring, string);
+  first->executable_path = memstring;
+  first->port = 80;
+  ruleListAdd(first);
+
   // A non 0 return means init_module failed; module can't be loaded.
   return errno;
 }
@@ -177,7 +209,7 @@ int init_module(void)
 
 void cleanup_module(void)
 {
-
-    nf_unregister_hook (&firewallExtension_ops); /* restore everything to normal */
-    printk(KERN_INFO "Firewall extensions module unloaded\n");
+        ruleListFree();
+        nf_unregister_hook (&firewallExtension_ops); /* restore everything to normal */
+        printk(KERN_INFO "Firewall extensions module unloaded\n");
 }
