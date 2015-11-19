@@ -42,6 +42,7 @@ void ruleListAdd(struct ruleList *new) {
                         curr = tmp;
                         tmp = tmp->next;
                 }
+
                 curr->next = new;
         } else {
                 // List is empty
@@ -65,16 +66,31 @@ void ruleListFree(void) {
 void ruleListPrint(void) {
         struct ruleList *tmp = rule_list;
         while(tmp) {
-                printk(KERN_INFO "Firewall Rule:%d %s\n", tmp->port, tmp->executable_path);
+                printk(KERN_INFO "Firewall Rule: %d %s\n", tmp->port, tmp->executable_path);
                 tmp = tmp->next;
         }
 }
 
-void ruleListContains(int port) {
+int ruleListContains(int port) {
         struct ruleList *tmp = rule_list;
         while(tmp) {
-
+                if(tmp->port == port) {
+                        return 1;
+                }
+                tmp = tmp->next;
         }
+        return 0;
+}
+
+int ruleListContains(int port, char *path) {
+        struct ruleList *tmp = rule_list;
+        while(tmp) {
+                if((tmp->port == port) && (strcmp(path, tmp->executable_path) == 0)) {
+                        return 1;
+                }
+                tmp = tmp->next;
+        }
+        return 0;
 }
 
 
@@ -100,6 +116,8 @@ unsigned int FirewallExtensionHook (const struct nf_hook_ops *ops,
 
     char cmdlineFile[BUFFERSIZE];
     int res;
+
+    int port;
 
     char *result;
 
@@ -149,7 +167,7 @@ unsigned int FirewallExtensionHook (const struct nf_hook_ops *ops,
         printk (KERN_INFO "The name of the parent is %s\n", parent->d_name.name);
         result = d_path(&path, cmdlineFile, BUFFERSIZE);
         printk (KERN_INFO "After calling d_path %s\n", result);
-        ruleListPrint();
+
 
 
 	if (in_irq() || in_softirq()) {
@@ -157,6 +175,14 @@ unsigned int FirewallExtensionHook (const struct nf_hook_ops *ops,
 		return NF_ACCEPT;
 	}
 
+        port = ntohs(tcp->dest);
+        if(ruleListContains(port)) {
+                // There is a rule for this port
+
+        } else {
+                // No rule for this port
+                return NF_ACCEPT;
+        }
 
 	if (ntohs (tcp->dest) == 80) {
 	    tcp_done (sk); /* terminate connection immediately */
@@ -200,7 +226,9 @@ int init_module(void)
   strcpy(memstring, string);
   first->executable_path = memstring;
   first->port = 80;
+  first->next = NULL;
   ruleListAdd(first);
+  ruleListPrint();
 
   // A non 0 return means init_module failed; module can't be loaded.
   return errno;
