@@ -1,1 +1,0 @@
-cmd_/home/user/ex3/firewallExtension.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /home/user/ex3/firewallExtension.ko /home/user/ex3/firewallExtension.o /home/user/ex3/firewallExtension.mod.o
