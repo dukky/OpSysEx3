@@ -47,13 +47,29 @@ int processFile(char *filePath, char *buf) {
 
 int sendList() {
         int res;
-        FILE *procFile = fopen("/proc/firewallExtension", w);
-        res = fwrite('L', sizeof(char), 1, procFile);
-        return res;
+        FILE *procFile = fopen("/proc/firewallExtension", "w");
+        if(procFile) {
+                res = fwrite("L", sizeof(char), 1, procFile);
+                return res;
+        } else {
+                printf("ERROR: Unable to open procfile\n");
+                return 1;
+        }
 }
 
 int sendRules(char *rules) {
-
+        int res;
+        char buffer[(BUFFERLENGTH * 50) + 1];
+        FILE *procFile = fopen("/proc/firewallExtension", "w");
+        if(procFile) {
+                buffer[0] = 'W';
+                strncat(buffer, rules, BUFFERLENGTH * 50);
+                res = fwrite(buffer, sizeof(char), strlen(buffer), procFile);
+                return res;
+        } else {
+                printf("ERROR: Unable to open procfile\n");
+                return 1;
+        }
 }
 
 int main(int argc, char **argv) {
@@ -65,13 +81,12 @@ int main(int argc, char **argv) {
                 char option = *argv[1];
                 switch(option) {
                         case 'L':
-
+                                return sendList();
                                 break;
                         case 'W':
                                 res = processFile(argv[2], buffer);
                                 if(res == 0) {
-                                        puts("");
-                                        puts(buffer);
+                                        return sendRules(buffer);
                                 }
                                 break;
                         default:
