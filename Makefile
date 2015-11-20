@@ -6,8 +6,11 @@ MODULES = firewallExtension.ko findExecutable.ko kernelWrite.ko
 
 obj-m += firewallExtension.o findExecutable.o kernelWrite.o
 
-all:
+all: firewallSetup
 	make -C  $(KERNELDIR) M=$(PWD) modules
+
+firewallSetup:
+	gcc -o firewallSetup -Werror -Wall firewallSetup.c
 
 clean:
 	make -C $(KERNELDIR) M=$(PWD) clean

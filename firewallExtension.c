@@ -215,20 +215,40 @@ static struct nf_hook_ops firewallExtension_ops = {
 ssize_t kernelWrite (struct file *file, const char __user *buffer, size_t count, loff_t *offset) {
 
 
-    char *kern_buffer = kmalloc(sizeof(char) * 2048*50, GFP_KERNEL);
+    char *kern_buffer = kzalloc(sizeof(char) * 2048*50, GFP_KERNEL);
+    char *rules;
     char command;
+    char *line;
+    struct ruleList *new;
+    char *path;
+    int port;
+    int res;
     if (copy_from_user(kern_buffer, buffer, count)) {
 	return -EFAULT;
     }
     printk(KERN_INFO "Recieved:\n%s\n", kern_buffer);
     printk (KERN_INFO "kernelWrite entered\n");
     command = kern_buffer[0];
-
+    rules = &kern_buffer[1];
   switch (command) {
     case 'L':
-	//List
+	ruleListPrint();
 	break;
     case 'W':
+        rule_list = NULL;
+        while(rules != NULL) {
+                line = strsep(&rules, "\n");
+                if(strlen(line) > 0) {
+                        // Not empty line
+                        path = kzalloc(sizeof(char) * strlen(line), GFP_KERNEL);
+                        res = sscanf(line, "%d %s", &port, path);
+                        new = kmalloc(sizeof(struct ruleList), GFP_KERNEL);
+                        new->executable_path = path;
+                        new->port = port;
+                        new->next = NULL;
+                        ruleListAdd(new);
+                }
+        }
 	//Write new rules
       break;
     default:
