@@ -61,9 +61,11 @@ int sendRules(char *rules) {
         int res;
         char buffer[(BUFFERLENGTH * 50) + 1];
         FILE *procFile = fopen("/proc/firewallExtension", "w");
+        buffer[0] = 'W';
+        strncat(buffer, rules, BUFFERLENGTH * 50);
+        printf("Buffer\n%s\n", buffer);
         if(procFile) {
-                buffer[0] = 'W';
-                strncat(buffer, rules, BUFFERLENGTH * 50);
+
                 res = fwrite(buffer, sizeof(char), strlen(buffer), procFile);
                 return res;
         } else {

@@ -15,6 +15,7 @@ MODULE_LICENSE("GPL");
 
 
 /* make IP4-addresses readable */
+#define PROC_ENTRY_FILENAME "firewallExtension"
 
 #define NIPQUAD(addr) \
         ((unsigned char *)&addr)[0], \
@@ -25,6 +26,7 @@ MODULE_LICENSE("GPL");
 
 struct nf_hook_ops *reg;
 struct ruleList *rule_list;
+static struct proc_dir_entry *Our_Proc_File;
 
 struct ruleList {
        int port;
@@ -213,14 +215,14 @@ static struct nf_hook_ops firewallExtension_ops = {
 ssize_t kernelWrite (struct file *file, const char __user *buffer, size_t count, loff_t *offset) {
 
 
-    char kern_buffer[2048*50];
-
+    char *kern_buffer = kmalloc(sizeof(char) * 2048*50, GFP_KERNEL);
+    char command;
     if (copy_from_user(kern_buffer, buffer, count)) {
 	return -EFAULT;
     }
-    printf("Recieved:\n%s\n", kern_buffer);
+    printk(KERN_INFO "Recieved:\n%s\n", kern_buffer);
     printk (KERN_INFO "kernelWrite entered\n");
-    char command = kern_buffer[0];
+    command = kern_buffer[0];
 
   switch (command) {
     case 'L':
@@ -232,6 +234,7 @@ ssize_t kernelWrite (struct file *file, const char __user *buffer, size_t count,
     default:
       printk (KERN_INFO "kernelWrite: Illegal command \n");
   }
+  kfree(kern_buffer);
   return count;
 }
 
@@ -253,7 +256,7 @@ int procfs_open(struct inode *inode, struct file *file)
  */
 int procfs_close(struct inode *inode, struct file *file)
 {
-    printk (KERN_INFO "fireWallExtension closed\n");
+    printk (KERN_INFO "firewallExtension closed\n");
     module_put(THIS_MODULE);
     return 0;		/* success */
 }
@@ -272,6 +275,15 @@ int init_module(void)
   struct ruleList *first;
   char string[] = "/bin/nc.openbsd";
   char *memstring;
+
+  Our_Proc_File = proc_create_data (PROC_ENTRY_FILENAME, 0644, NULL, &File_Ops_4_Our_Proc_File, NULL);
+  if (Our_Proc_File == NULL){
+    printk(KERN_ALERT "Error: Could not initialize /proc/%s\n",
+           PROC_ENTRY_FILENAME);
+    return -ENOMEM;
+  }
+
+  printk(KERN_INFO "/proc/%s created\n", PROC_ENTRY_FILENAME);
 
   errno = nf_register_hook (&firewallExtension_ops); /* register the hook */
   if (errno) {
@@ -303,6 +315,8 @@ int init_module(void)
 void cleanup_module(void)
 {
         ruleListFree();
+        remove_proc_entry(PROC_ENTRY_FILENAME, NULL);
+        printk(KERN_INFO "/proc/%s removed\n", PROC_ENTRY_FILENAME);
         nf_unregister_hook (&firewallExtension_ops); /* restore everything to normal */
         printk(KERN_INFO "Firewall extensions module unloaded\n");
 }
